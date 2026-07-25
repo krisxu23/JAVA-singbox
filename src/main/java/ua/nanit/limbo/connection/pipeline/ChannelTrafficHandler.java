@@ -3,6 +3,7 @@ package ua.nanit.limbo.connection.pipeline;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.util.ReferenceCountUtil;
 import org.jetbrains.annotations.NotNull;
 import ua.nanit.limbo.server.Log;
 
@@ -31,14 +32,14 @@ public class ChannelTrafficHandler extends ChannelInboundHandlerAdapter {
             int bytes = in.readableBytes();
 
             if (maxPacketSize > 0 && bytes > maxPacketSize) {
-                closeConnection(ctx, "Closed %s due to large packet size (%d bytes)", ctx.channel().remoteAddress(), bytes);
+                closeConnection(ctx, msg, "Closed %s due to large packet size (%d bytes)", ctx.channel().remoteAddress(), bytes);
                 return;
             }
 
             if (packetBucket != null) {
                 packetBucket.incrementPackets(1);
                 if (packetBucket.getCurrentPacketRate() > maxPacketRate) {
-                    closeConnection(ctx, "Closed %s due to many packets sent (%d in the last %.1f seconds)",
+                    closeConnection(ctx, msg, "Closed %s due to many packets sent (%d in the last %.1f seconds)",
                             ctx.channel().remoteAddress(), packetBucket.sum, (packetBucket.intervalTime / 1000.0));
                     return;
                 }
@@ -48,7 +49,8 @@ public class ChannelTrafficHandler extends ChannelInboundHandlerAdapter {
         super.channelRead(ctx, msg);
     }
 
-    private void closeConnection(ChannelHandlerContext ctx, String reason, Object... args) {
+    private void closeConnection(ChannelHandlerContext ctx, Object msg, String reason, Object... args) {
+        ReferenceCountUtil.release(msg);
         ctx.close();
         Log.info(reason, args);
     }

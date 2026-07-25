@@ -26,6 +26,16 @@ import java.util.List;
 
 public class VarIntFrameDecoder extends ByteToMessageDecoder {
 
+    private final int maxPacketSize;
+
+    public VarIntFrameDecoder() {
+        this(-1);
+    }
+
+    public VarIntFrameDecoder(int maxPacketSize) {
+        this.maxPacketSize = maxPacketSize;
+    }
+
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
         if (!ctx.channel().isActive()) {
@@ -62,7 +72,15 @@ public class VarIntFrameDecoder extends ByteToMessageDecoder {
             int packetLengthBytes = bytesRead;
             int available = in.readableBytes();
 
-            if (available < packetLength) {
+            if (maxPacketSize > 0 && packetLength > maxPacketSize) {
+                Log.warning("Packet length %d exceeds limit %d from %s, closing connection",
+                        packetLength, maxPacketSize, ctx.channel().remoteAddress());
+                ctx.close();
+                in.clear();
+                return;
+            }
+
+            if (available < packetLengthBytes + packetLength) {
                 return;
             }
 

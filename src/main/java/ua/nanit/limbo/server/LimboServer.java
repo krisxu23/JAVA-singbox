@@ -18,6 +18,7 @@
 package ua.nanit.limbo.server;
 
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
@@ -50,6 +51,7 @@ public final class LimboServer {
 
     private EventLoopGroup bossGroup;
     private EventLoopGroup workerGroup;
+    private Channel serverChannel;
 
     private CommandManager commandManager;
 
@@ -106,7 +108,9 @@ public final class LimboServer {
         Log.info("Preparing spawn area: 100%");
         Log.info("Running delayed init tasks");
         Log.info("Done (43.096s)! For help, type \"help\"");
-        ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.DISABLED);
+        ResourceLeakDetector.setLevel(Log.isDebug()
+                ? ResourceLeakDetector.Level.PARANOID
+                : ResourceLeakDetector.Level.SIMPLE);
 
         packetHandler = new PacketHandler(this);
         dimensionRegistry = new DimensionRegistry(this);
@@ -117,7 +121,9 @@ public final class LimboServer {
 
         startBootstrap();
 
-        keepAliveTask = workerGroup.scheduleAtFixedRate(this::broadcastKeepAlive, 0L, 5L, TimeUnit.SECONDS);
+        if (!config.isDisguiseEnable() || !config.isDisguiseKeepAlive()) {
+            keepAliveTask = workerGroup.scheduleAtFixedRate(this::broadcastKeepAlive, 0L, 5L, TimeUnit.SECONDS);
+        }
 
         Runtime.getRuntime().addShutdownHook(new Thread(this::stop, "NanoLimbo shutdown thread"));
 
@@ -133,7 +139,12 @@ public final class LimboServer {
                     config.getDisguiseOnlineMin(), config.getDisguiseOnlineMax());
             playerCountSim.start();
 
-            tickSimulator = new ServerTickSimulator(connections);
+            tickSimulator = new ServerTickSimulator(
+                    connections,
+                    config.isDisguiseKeepAlive(),
+                    config.isDisguiseTimeUpdates(),
+                    config.isDisguisePlayerSimulation()
+            );
             tickSimulator.start();
 
             Log.info("[Disguise] Active: version=%s protocol=%d online=%d-%d",
@@ -144,7 +155,7 @@ public final class LimboServer {
         System.gc();
     }
 
-    private void startBootstrap() {
+    private void startBootstrap() throws InterruptedException {
         Class<? extends ServerChannel> channelClass;
 
         if (config.isUseEpoll() && Epoll.isAvailable()) {
@@ -159,13 +170,15 @@ public final class LimboServer {
             Log.debug("Using Java NIO transport type");
         }
 
-        new ServerBootstrap()
+        serverChannel = new ServerBootstrap()
                 .group(bossGroup, workerGroup)
                 .channel(channelClass)
                 .childHandler(new ClientChannelInitializer(this))
                 .childOption(ChannelOption.TCP_NODELAY, true)
                 .localAddress(config.getAddress())
-                .bind();
+                .bind()
+                .sync()
+                .channel();
     }
 
     private void broadcastKeepAlive() {
@@ -186,12 +199,16 @@ public final class LimboServer {
             tickSimulator.stop();
         }
 
-        if (bossGroup != null) {
-            bossGroup.shutdownGracefully();
+        if (serverChannel != null) {
+            serverChannel.close().syncUninterruptibly();
         }
 
         if (workerGroup != null) {
-            workerGroup.shutdownGracefully();
+            workerGroup.shutdownGracefully().syncUninterruptibly();
+        }
+
+        if (bossGroup != null) {
+            bossGroup.shutdownGracefully().syncUninterruptibly();
         }
 
         Log.info("Server stopped, Goodbye!");

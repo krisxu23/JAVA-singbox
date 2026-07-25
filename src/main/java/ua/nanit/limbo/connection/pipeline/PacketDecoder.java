@@ -56,6 +56,8 @@ public class PacketDecoder extends MessageToMessageDecoder<ByteBuf> {
                 } else {
                     Log.warning("Cannot decode packet 0x%s: %s", Integer.toHexString(packetId), e.getMessage());
                 }
+                ctx.close();
+                return;
             }
 
             ctx.fireChannelRead(packet);

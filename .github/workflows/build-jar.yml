@@ -46,7 +46,6 @@ jobs:
           name: NanoLimbo-artifact
 
       - name: Create Release
-        continue-on-error: true
         uses: softprops/action-gh-release@v2
         with:
           files: "server.jar"
@@ -55,5 +54,5 @@ jobs:
           body: "Automated release from workflow run #${{ github.run_number }}
           
 JAR 也可直接从 Actions Artifacts 下载: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          fail_on_unmatched_files: false
+          fail_on_unmatched_files: true
           make_latest: "legacy"

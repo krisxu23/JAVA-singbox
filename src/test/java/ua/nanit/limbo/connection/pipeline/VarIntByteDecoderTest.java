@@ -8,7 +8,6 @@ class VarIntByteDecoderTest {
     @Test
     void decodeSingleByte() {
         VarIntByteDecoder reader = new VarIntByteDecoder();
-        assertTrue(reader.process((byte) 0x00));
         assertFalse(reader.process((byte) 0x01)); // continuation bit not set -> SUCCESS
         assertEquals(VarIntByteDecoder.DecodeResult.SUCCESS, reader.getResult());
         assertEquals(1, reader.getReadVarInt());

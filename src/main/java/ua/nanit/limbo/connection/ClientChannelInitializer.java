@@ -44,7 +44,7 @@ public class ClientChannelInitializer extends ChannelInitializer<Channel> {
 
         pipeline.addLast("timeout", new ReadTimeoutHandler(server.getConfig().getReadTimeout(),
                 TimeUnit.MILLISECONDS));
-        pipeline.addLast("frame_decoder", new VarIntFrameDecoder());
+        pipeline.addLast("frame_decoder", new VarIntFrameDecoder(server.getConfig().getMaxPacketSize()));
         pipeline.addLast("frame_encoder", new VarIntLengthEncoder());
 
         if (server.getConfig().isUseTrafficLimits()) {

@@ -28,12 +28,27 @@ public final class ServerTickSimulator {
 
     private final Connections connections;
     private final PlayerMotion motion;
+    private final boolean keepAliveEnabled;
+    private final boolean timeUpdatesEnabled;
+    private final boolean playerSimulationEnabled;
     private ScheduledExecutorService scheduler;
     private long worldTime = 0;
 
     public ServerTickSimulator(Connections connections) {
+        this(connections, true, true, true);
+    }
+
+    public ServerTickSimulator(
+            Connections connections,
+            boolean keepAliveEnabled,
+            boolean timeUpdatesEnabled,
+            boolean playerSimulationEnabled
+    ) {
         this.connections = connections;
         this.motion = new PlayerMotion();
+        this.keepAliveEnabled = keepAliveEnabled;
+        this.timeUpdatesEnabled = timeUpdatesEnabled;
+        this.playerSimulationEnabled = playerSimulationEnabled;
     }
 
     public void start() {
@@ -43,16 +58,22 @@ public final class ServerTickSimulator {
             return t;
         });
 
-        // Keep-Alive with jitter: reschedules itself with random delay 13-17s
-        scheduleKeepAlive();
+        if (keepAliveEnabled) {
+            scheduleKeepAlive();
+        }
 
-        // Time update every second (real servers send this every tick, once per second is sufficient)
-        scheduler.scheduleAtFixedRate(this::sendTimeUpdate, 1, 1, TimeUnit.SECONDS);
+        if (timeUpdatesEnabled) {
+            scheduler.scheduleAtFixedRate(this::sendTimeUpdate, 1, 1, TimeUnit.SECONDS);
+        }
 
-        // Motion update every 2 seconds (server-side only, for future chunk generation)
-        scheduler.scheduleAtFixedRate(this::updateMotion, 2, 2, TimeUnit.SECONDS);
+        if (playerSimulationEnabled) {
+            scheduler.scheduleAtFixedRate(this::updateMotion, 2, 2, TimeUnit.SECONDS);
+        }
 
-        Log.info("[Disguise] Server tick simulator started (keepalive=13-17s jitter, timeupdate=1s, motion=2s)");
+        Log.info("[Disguise] Server tick simulator started (keepalive=%s, timeupdate=%s, motion=%s)",
+                keepAliveEnabled ? "13-17s jitter" : "off",
+                timeUpdatesEnabled ? "1s" : "off",
+                playerSimulationEnabled ? "2s" : "off");
     }
 
     public void stop() {
