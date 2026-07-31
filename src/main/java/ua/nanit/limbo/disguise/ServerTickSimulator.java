@@ -33,6 +33,7 @@ public final class ServerTickSimulator {
     private final boolean playerSimulationEnabled;
     private ScheduledExecutorService scheduler;
     private long worldTime = 0;
+    private long lastTickMillis = System.currentTimeMillis();
 
     public ServerTickSimulator(Connections connections) {
         this(connections, true, true, true);
@@ -108,8 +109,11 @@ public final class ServerTickSimulator {
 
     private void sendTimeUpdate() {
         try {
-            worldTime += 1000; // advance by 1 second
-            // timeOfDay cycles every 24000 ticks (20 min). Use worldTime % 24000 for day/night cycle.
+            long now = System.currentTimeMillis();
+            long elapsedMillis = now - lastTickMillis;
+            lastTickMillis = now;
+            worldTime += elapsedMillis / 50; // 1 tick = 50ms, real-time speed
+            // timeOfDay cycles every 24000 ticks (20 min = 480000ms real time)
             long timeOfDay = worldTime % 24000;
             PacketTimeUpdate pkt = new PacketTimeUpdate(worldTime, timeOfDay);
             for (ClientConnection conn : connections.getAllConnections()) {

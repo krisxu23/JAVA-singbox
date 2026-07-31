@@ -129,9 +129,10 @@ public final class SubscriptionGenerator {
             for (String port : s5Port.split(",")) {
                 port = port.trim();
                 if (!port.isEmpty()) {
-                    String s5Auth = Base64.getEncoder().encodeToString((uuid.substring(0,8) + ":" + uuid.substring(uuid.length()-12)).getBytes("UTF-8")).replace("=", "");
-                    String link = String.format("socks://%s@%s:%s#S5-%s",
-                        s5Auth, directAddr, port, name);
+                    String user = uuid.substring(0, 8);
+                    String pass = uuid.substring(uuid.length() - 12);
+                    String link = String.format("socks5://%s:%s@%s:%s#S5-%s",
+                        user, pass, directAddr, port, name);
                     sub.append(link).append("\n");
                 }
             }

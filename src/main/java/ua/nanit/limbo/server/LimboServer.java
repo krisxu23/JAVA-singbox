@@ -122,7 +122,7 @@ public final class LimboServer {
         startBootstrap();
 
         if (!config.isDisguiseEnable() || !config.isDisguiseKeepAlive()) {
-            keepAliveTask = workerGroup.scheduleAtFixedRate(this::broadcastKeepAlive, 0L, 5L, TimeUnit.SECONDS);
+            keepAliveTask = workerGroup.scheduleAtFixedRate(this::broadcastKeepAlive, 0L, 15L, TimeUnit.SECONDS);
         }
 
         Runtime.getRuntime().addShutdownHook(new Thread(this::stop, "NanoLimbo shutdown thread"));

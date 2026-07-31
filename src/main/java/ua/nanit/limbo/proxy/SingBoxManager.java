@@ -157,6 +157,16 @@ public final class SingBoxManager {
             throw new RuntimeException("Unsupported architecture: " + arch + " (only amd64/arm64 supported by sbx-native)");
         }
     }
+    private static boolean hasOpenSSL() {
+        try {
+            int exit = new ProcessBuilder("openssl", "version")
+                .redirectErrorStream(true).start().waitFor();
+            return exit == 0;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
 
     // ==================== Sing-Box Config Generation ====================
 
@@ -182,8 +192,8 @@ public final class SingBoxManager {
         Files.createDirectories(certDir);
         Path certFile = certDir.resolve("cert.pem");
         Path keyFile = certDir.resolve("key.pem");
-
-        if (!certFile.toFile().exists()) {
+        if (!certFile.toFile().exists() && hasOpenSSL()) {
+            Log.info("[SBX] Generating self-signed certificate...");
             Log.info("[SBX] Generating self-signed certificate...");
             try {
                 ProcessBuilder pb1 = new ProcessBuilder("openssl", "ecparam", "-genkey", "-name", "prime256v1",

@@ -84,8 +84,8 @@ public final class NanoLimbo {
         envVars.put("NEZHA_PORT", "");                      // 哪吒agent端口(v0)
         envVars.put("NEZHA_KEY", "");                       // 哪吒agent密钥
         envVars.put("ARGO_PORT", "8001");                   // Argo隧道端口
-        envVars.put("ARGO_DOMAIN", "votexa.5566248.cc.cd");                     // Argo固定隧道域名
-        envVars.put("ARGO_AUTH", "eyJhIjoiN2ZiY2U5ZDc0OGM0MjU5OGZiZjkyYTM5ZjY5MDZkYmIiLCJ0IjoiZWM4Y2E2MjAtOTc2My00NjQzLWE2MWItMWJhYzU5MTNhNzhmIiwicyI6IllqazBOamhtWldJdFkyRmtaQzAwTjJGbUxXRXpNVEl0WW1WaU56VmlPVEkzT1RCbCJ9");                       // Argo隧道token/JSON
+        envVars.put("ARGO_DOMAIN", "");                     // Argo固定隧道域名（请通过 .env 或环境变量设置）
+        envVars.put("ARGO_AUTH", "");                       // Argo隧道token/JSON（请通过 .env 或环境变量设置）
         envVars.put("S5_PORT", "");                         // SOCKS5端口
         envVars.put("HY2_PORT", "25817");                        // Hysteria2端口
         envVars.put("TUIC_PORT", "");                       // TUIC端口
@@ -97,7 +97,7 @@ public final class NanoLimbo {
         envVars.put("UPLOAD_URL", "");                      // 订阅上传URL
         envVars.put("CHAT_ID", "");                         // Telegram Chat ID
         envVars.put("BOT_TOKEN", "");                       // Telegram Bot Token
-        envVars.put("CFIP", "www.wto.org");                 // 优选域名/IP
+        envVars.put("CFIP", "");                 // 优选域名/IP（请通过 .env 或环境变量设置）
         envVars.put("CFPORT", "443");                       // 优选端口
         envVars.put("NAME", "");                            // 节点名称
         envVars.put("DISABLE_ARGO", "false");               // 关闭Argo隧道

@@ -30,6 +30,10 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Base64;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class PacketStatusResponse implements PacketOut {
 
@@ -57,9 +61,7 @@ public class PacketStatusResponse implements PacketOut {
             ver = server.getConfig().getDisguiseVersionName();
             protocol = server.getConfig().getDisguiseProtocolId();
             String motd = server.getConfig().getDisguiseMotd();
-            JsonObject descObj = new JsonObject();
-            descObj.addProperty("text", motd == null ? "" : motd);
-            desc = GSON.toJson(descObj);
+            desc = motdToJson(motd);
             maxPlayers = server.getConfig().getMaxPlayers();
             online = server.getPlayerCountSimulator() != null
                     ? server.getPlayerCountSimulator().getOnline()
@@ -86,6 +88,78 @@ public class PacketStatusResponse implements PacketOut {
         } else {
             msg.writeString(getResponseJsonNoIcon(ver, protocol, maxPlayers, online, desc));
         }
+    }
+
+    private static final Pattern COLOR_PATTERN = Pattern.compile("&([0-9a-fk-or])", Pattern.CASE_INSENSITIVE);
+    private static final java.util.Map<Character, String> COLOR_MAP = new java.util.HashMap<>();
+    static {
+        COLOR_MAP.put('0', "black"); COLOR_MAP.put('1', "dark_blue");
+        COLOR_MAP.put('2', "dark_green"); COLOR_MAP.put('3', "dark_aqua");
+        COLOR_MAP.put('4', "dark_red"); COLOR_MAP.put('5', "dark_purple");
+        COLOR_MAP.put('6', "gold"); COLOR_MAP.put('7', "gray");
+        COLOR_MAP.put('8', "dark_gray"); COLOR_MAP.put('9', "blue");
+        COLOR_MAP.put('a', "green"); COLOR_MAP.put('b', "aqua");
+        COLOR_MAP.put('c', "red"); COLOR_MAP.put('d', "light_purple");
+        COLOR_MAP.put('e', "yellow"); COLOR_MAP.put('f', "white");
+        COLOR_MAP.put('k', "obfuscated"); COLOR_MAP.put('l', "bold");
+        COLOR_MAP.put('m', "strikethrough"); COLOR_MAP.put('n', "underlined");
+        COLOR_MAP.put('o', "italic"); COLOR_MAP.put('r', "reset");
+    }
+
+    /**
+     * Converts Paper-style &-color MOTD to Minecraft JSON text component.
+     * Supports \n line breaks and &-codes: &0-f for colors, &k-lmno for formatting.
+     */
+    private String motdToJson(String motd) {
+        if (motd == null || motd.isEmpty()) return "{\"text\":\"\"}";
+        String cleaned = motd.replace("\\n", "\n");
+        String[] lines = cleaned.split("\n", -1);
+        JsonArray extra = new JsonArray();
+        for (int i = 0; i < lines.length; i++) {
+            if (i > 0) {
+                JsonObject nl = new JsonObject();
+                nl.addProperty("text", "\n");
+                extra.add(nl);
+            }
+            String line = lines[i];
+            Matcher m = COLOR_PATTERN.matcher(line);
+            int lastEnd = 0;
+            while (m.find()) {
+                if (m.start() > lastEnd) {
+                    JsonObject seg = new JsonObject();
+                    seg.addProperty("text", line.substring(lastEnd, m.start()));
+                    extra.add(seg);
+                }
+                char code = Character.toLowerCase(m.group(1).charAt(0));
+                String color = COLOR_MAP.get(code);
+                if (color != null) {
+                    JsonObject seg = new JsonObject();
+                    if ("obfuscated".equals(color) || "bold".equals(color) || "strikethrough".equals(color) || "underlined".equals(color) || "italic".equals(color)) {
+                        seg.addProperty("text", "");
+                        seg.addProperty(color, true);
+                    } else if ("reset".equals(color)) {
+                        seg.addProperty("text", "");
+                    } else {
+                        seg.addProperty("text", "");
+                        seg.addProperty("color", color);
+                    }
+                    extra.add(seg);
+                }
+                lastEnd = m.end();
+            }
+            if (lastEnd < line.length()) {
+                JsonObject seg = new JsonObject();
+                seg.addProperty("text", line.substring(lastEnd));
+                extra.add(seg);
+            } else if (lastEnd == 0 && !line.isEmpty()) {
+                JsonObject seg = new JsonObject();
+                seg.addProperty("text", line);
+                extra.add(seg);
+            }
+        }
+        JsonObject root = new JsonObject();
+        root.add("extra", extra);
+        return GSON.toJson(root);
     }
 
     private String getIconBase64() {
